@@ -2,6 +2,7 @@ package com.example.doitnow.service;
 
 import com.example.doitnow.dto.CreateTaskDTO;
 import com.example.doitnow.dto.TaskDTO;
+import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Task;
 import com.example.doitnow.repository.TaskRepository;
 import org.springframework.stereotype.Service;
@@ -25,10 +26,11 @@ public class TaskService {
     }
 
     public TaskDTO findTaskById(String id) {
-        // Nous verrons la gestion d'erreur au prochain module
-        return taskRepository.findById(id)
-                .map(this::convertToDTO)
-                .orElse(null);
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tâche non trouvée avec l'ID : " + id
+                ));
+        return convertToDTO(task);
     }
 
     public TaskDTO createTask(CreateTaskDTO createTaskDTO) {
@@ -41,16 +43,26 @@ public class TaskService {
         return convertToDTO(savedTask);
     }
 
+
     public TaskDTO updateTask(String id, TaskDTO taskDTO) {
-        // Ici, on suppose que le client envoie l'objet complet
-        Task task = convertToEntity(taskDTO);
-        task.setId(id); // Assure que l'ID est le bon
-        Task updatedTask = taskRepository.save(task);
+        // 1. Vérifier que la tâche existe
+        taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'ID : " + id));
+
+        // 2. Mettre à jour
+        Task taskToUpdate = convertToEntity(taskDTO);
+        taskToUpdate.setId(id); // On s'assure de garder le bon ID
+        Task updatedTask = taskRepository.save(taskToUpdate);
         return convertToDTO(updatedTask);
     }
 
     public void deleteTask(String id) {
-        taskRepository.deleteById(id);
+        // 1. Vérifier que la tâche existe avant de supprimer
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'ID : " + id));
+
+        // 2. Supprimer
+        taskRepository.deleteById(task.getId());
     }
 
     // Méthodes de conversion privées
