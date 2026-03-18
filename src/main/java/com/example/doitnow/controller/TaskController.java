@@ -34,7 +34,7 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public TaskDTO updateTask(@PathVariable String id, @RequestBody TaskDTO taskDTO) {
+    public TaskDTO updateTask(@PathVariable String id, @Valid @RequestBody TaskDTO taskDTO) {
         return taskService.updateTask(id, taskDTO);
     }
 
