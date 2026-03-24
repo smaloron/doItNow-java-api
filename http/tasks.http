@@ -1,0 +1,80 @@
+### Create a task
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Ma premiere tache",
+  "description": "Description de la tache"
+}
+
+> {%
+    client.global.set("task_id", response.body.id);
+%}
+
+### Create a task - validation error (title too short)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "ab",
+  "description": "Le titre est trop court"
+}
+
+### Create a task - validation error (title missing)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "",
+  "description": "Pas de titre"
+}
+
+### Get all tasks
+GET http://localhost:8081/api/tasks
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Get a task by ID
+GET http://localhost:8081/api/tasks/{{task_id}}
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Get a task - not found
+GET http://localhost:8081/api/tasks/unknown-id
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Update a task
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "id": "{{task_id}}",
+  "title": "Tache mise a jour",
+  "description": "Description mise a jour",
+  "completed": true
+}
+
+### Update a task - validation error (title blank)
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "id": "{{task_id}}",
+  "title": "",
+  "description": "Le titre est vide",
+  "completed": false
+}
+
+### Delete a task
+DELETE http://localhost:8081/api/tasks/{{task_id}}
+Authorization: Bearer {{auth_token}}
+
+### Access tasks without token (should return 403)
+GET http://localhost:8081/api/tasks
+Accept: application/json

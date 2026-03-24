@@ -1,0 +1,10 @@
+### Health check
+GET http://localhost:8081/api/health
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Welcome
+GET http://localhost:8081/api/welcome
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
