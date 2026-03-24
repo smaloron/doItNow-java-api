@@ -1,86 +1,65 @@
 package com.example.doitnow.service;
 
-import com.example.doitnow.dto.CreateTaskDTO;
-import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Task;
 import com.example.doitnow.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
 
+    // Injection de dépendance par constructeur
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    public List<TaskDTO> getAllTasks() {
-        return taskRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    // Récupérer toutes les tâches
+    public List<Task> getAllTasks() {
+        return taskRepository.findAll();
     }
 
-    public TaskDTO findTaskById(String id) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Tâche non trouvée avec l'ID : " + id
-                ));
-        return convertToDTO(task);
+    // Récupérer une tâche par son ID
+    public Task getTaskById(String id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'id : " + id));
     }
 
-    public TaskDTO createTask(CreateTaskDTO createTaskDTO) {
-        Task task = new Task();
-        task.setTitle(createTaskDTO.getTitle());
-        task.setDescription(createTaskDTO.getDescription());
-        task.setCompleted(false); // Par défaut
-
-        Task savedTask = taskRepository.save(task);
-        return convertToDTO(savedTask);
+    // Créer une nouvelle tâche
+    public Task createTask(Task task) {
+        task.setId(null); // On laisse MongoDB générer l'ID
+        return taskRepository.save(task);
     }
 
+    // Mettre à jour une tâche existante
+    public Task updateTask(String id, Task taskDetails) {
+        Task existingTask = getTaskById(id); // Lève une exception si non trouvée
 
-    public TaskDTO updateTask(String id, TaskDTO taskDTO) {
-        // 1. Vérifier que la tâche existe
-        taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'ID : " + id));
+        existingTask.setTitle(taskDetails.getTitle());
+        existingTask.setDescription(taskDetails.getDescription());
+        existingTask.setCompleted(taskDetails.isCompleted());
 
-        // 2. Mettre à jour
-        Task taskToUpdate = convertToEntity(taskDTO);
-        taskToUpdate.setId(id); // On s'assure de garder le bon ID
-        Task updatedTask = taskRepository.save(taskToUpdate);
-        return convertToDTO(updatedTask);
+        return taskRepository.save(existingTask);
     }
 
+    // Supprimer une tâche
     public void deleteTask(String id) {
-        // 1. Vérifier que la tâche existe avant de supprimer
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'ID : " + id));
-
-        // 2. Supprimer
-        taskRepository.deleteById(task.getId());
+        Task existingTask = getTaskById(id); // Vérifie que la tâche existe
+        taskRepository.deleteById(existingTask.getId());
     }
 
-    // Méthodes de conversion privées
-    private TaskDTO convertToDTO(Task task) {
-        TaskDTO dto = new TaskDTO();
-        dto.setId(task.getId());
-        dto.setTitle(task.getTitle());
-        dto.setDescription(task.getDescription());
-        dto.setCompleted(task.isCompleted());
-        return dto;
+    // --- BONUS : Recherche ---
+
+    // Trouver les tâches par statut (complétées ou non)
+    public List<Task> getTasksByCompleted(boolean completed) {
+        return taskRepository.findByCompleted(completed);
     }
 
-    private Task convertToEntity(TaskDTO dto) {
-        Task task = new Task();
-        task.setId(dto.getId());
-        task.setTitle(dto.getTitle());
-        task.setDescription(dto.getDescription());
-        task.setCompleted(dto.isCompleted());
-        return task;
+    // Rechercher des tâches par mot-clé dans le titre
+    public List<Task> searchTasksByTitle(String keyword) {
+        return taskRepository.findByTitleContainingIgnoreCase(keyword);
     }
 }
