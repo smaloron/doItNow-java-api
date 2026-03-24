@@ -4,7 +4,7 @@ import com.example.doitnow.dto.auth.AuthenticationRequest;
 import com.example.doitnow.dto.auth.AuthenticationResponse;
 import com.example.doitnow.dto.auth.RegisterRequest;
 import com.example.doitnow.model.User;
-import com.example.doitnow.repository.InMemoryUserRepository;
+import com.example.doitnow.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthenticationService {
 
-    private final InMemoryUserRepository userRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;

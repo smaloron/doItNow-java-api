@@ -11,4 +11,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     // Query method : retrouve un utilisateur par son email
     // Utilisé par Spring Security pour l'authentification
     Optional<User> findByEmail(String email);
+
+    // Vérifie si un utilisateur avec cet email existe déjà
+    boolean existsByEmail(String email);
 }
