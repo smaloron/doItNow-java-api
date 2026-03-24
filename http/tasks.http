@@ -1,0 +1,111 @@
+## Création de tâches
+
+### 1. Créer une tâche (cas nominal)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Apprendre Spring Boot",
+  "description": "Suivre le cours sur Spring Security et MongoDB"
+}
+
+> {%
+    client.global.set("task_id", response.body.id);
+%}
+
+### 2. Créer une deuxième tâche
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Configurer MongoDB",
+  "description": "Installer et configurer MongoDB en local"
+}
+
+### 3. Créer une tâche sans description
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Tache sans description"
+}
+
+## Lecture
+
+### 4. Récupérer toutes les tâches
+GET http://localhost:8081/api/tasks
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### 5. Récupérer une tâche par ID
+GET http://localhost:8081/api/tasks/{{task_id}}
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### 6. Récupérer une tâche inexistante (404)
+GET http://localhost:8081/api/tasks/000000000000000000000000
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+## Mise à jour
+
+### 7. Mettre à jour une tâche — marquer comme terminée
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Apprendre Spring Boot",
+  "description": "Cours terminé avec succès",
+  "completed": true
+}
+
+## Recherche
+
+### 8. Rechercher les tâches terminées
+GET http://localhost:8081/api/tasks/search?completed=true
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### 9. Rechercher les tâches non terminées
+GET http://localhost:8081/api/tasks/search?completed=false
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### 10. Rechercher par mot-clé
+GET http://localhost:8081/api/tasks/search?keyword=MongoDB
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### 11. Recherche sans critère (retourne tout)
+GET http://localhost:8081/api/tasks/search
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+## Suppression
+
+### 12. Supprimer une tâche
+DELETE http://localhost:8081/api/tasks/{{task_id}}
+Authorization: Bearer {{auth_token}}
+
+### 13. Vérifier la suppression (doit retourner 404)
+GET http://localhost:8081/api/tasks/{{task_id}}
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+## Sécurité — accès sans token
+
+### 14. GET sans token (403)
+GET http://localhost:8081/api/tasks
+Accept: application/json
+
+### 15. POST sans token (403)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Cette requête doit échouer"
+}
