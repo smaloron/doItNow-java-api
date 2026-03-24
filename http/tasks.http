@@ -1,0 +1,135 @@
+## Création de tâches - cas valides
+
+### Créer une tâche (cas nominal)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Ma premiere tache",
+  "description": "Description de la tache"
+}
+
+> {%
+    client.global.set("task_id", response.body.id);
+%}
+
+### Créer une tâche sans description (optionnelle)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Tache sans description"
+}
+
+## Création de tâches - validation du titre
+
+### Erreur : titre vide (@NotBlank)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "Le titre est vide"
+}
+
+### Erreur : titre absent (@NotBlank)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "description": "Pas de champ title du tout"
+}
+
+### Erreur : titre trop court - 2 caractères (@Size min=3)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "ab",
+  "description": "Le titre fait moins de 3 caractères"
+}
+
+### Erreur : titre trop long - 101 caractères (@Size max=100)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjk",
+  "description": "Le titre dépasse 100 caractères"
+}
+
+## Création de tâches - validation de la description
+
+### Erreur : description trop longue - plus de 500 caractères (@Size max=500)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Tache valide",
+  "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem."
+}
+
+## Mise à jour de tâches - cas valide
+
+### Mettre à jour une tâche (cas nominal)
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+
+{
+  "id": "{{task_id}}",
+  "title": "Tache mise a jour",
+  "description": "Description mise a jour",
+  "completed": true
+}
+
+## Mise à jour de tâches - validation du titre
+
+### Erreur : titre vide à la mise à jour (@NotBlank)
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+
+{
+  "id": "{{task_id}}",
+  "title": "",
+  "description": "Le titre est vide",
+  "completed": false
+}
+
+### Erreur : titre absent à la mise à jour (@NotBlank)
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+
+{
+  "id": "{{task_id}}",
+  "description": "Pas de champ title",
+  "completed": false
+}
+
+## Mise à jour de tâches - validation du statut completed
+
+### Erreur : completed absent (@NotNull)
+PUT http://localhost:8081/api/tasks/{{task_id}}
+Content-Type: application/json
+
+{
+  "id": "{{task_id}}",
+  "title": "Titre valide",
+  "description": "Le champ completed est absent"
+}
+
+## Lecture et suppression
+
+### Récupérer toutes les tâches
+GET http://localhost:8081/api/tasks
+Accept: application/json
+
+### Récupérer une tâche par ID
+GET http://localhost:8081/api/tasks/{{task_id}}
+Accept: application/json
+
+### Récupérer une tâche inexistante (404)
+GET http://localhost:8081/api/tasks/id-inexistant
+Accept: application/json
+
+### Supprimer une tâche
+DELETE http://localhost:8081/api/tasks/{{task_id}}
