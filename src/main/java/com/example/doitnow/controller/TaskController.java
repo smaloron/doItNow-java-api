@@ -1,6 +1,7 @@
 package com.example.doitnow.controller;
 
-import com.example.doitnow.model.Task;
+import com.example.doitnow.dto.CreateTaskDTO;
+import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,27 +22,27 @@ public class TaskController {
 
     // GET /api/tasks — Récupérer toutes les tâches
     @GetMapping
-    public ResponseEntity<List<Task>> getAllTasks() {
+    public ResponseEntity<List<TaskDTO>> getAllTasks() {
         return ResponseEntity.ok(taskService.getAllTasks());
     }
 
     // GET /api/tasks/{id} — Récupérer une tâche par ID
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskById(@PathVariable String id) {
+    public ResponseEntity<TaskDTO> getTaskById(@PathVariable String id) {
         return ResponseEntity.ok(taskService.getTaskById(id));
     }
 
     // POST /api/tasks — Créer une nouvelle tâche
     @PostMapping
-    public ResponseEntity<Task> createTask(@Valid @RequestBody Task task) {
-        Task createdTask = taskService.createTask(task);
+    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody CreateTaskDTO createTaskDTO) {
+        TaskDTO createdTask = taskService.createTask(createTaskDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
     }
 
     // PUT /api/tasks/{id} — Mettre à jour une tâche
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable String id, @Valid @RequestBody Task task) {
-        return ResponseEntity.ok(taskService.updateTask(id, task));
+    public ResponseEntity<TaskDTO> updateTask(@PathVariable String id, @Valid @RequestBody TaskDTO taskDTO) {
+        return ResponseEntity.ok(taskService.updateTask(id, taskDTO));
     }
 
     // DELETE /api/tasks/{id} — Supprimer une tâche
@@ -51,11 +52,9 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- BONUS : Endpoints de recherche ---
-
     // GET /api/tasks/search?completed=true — Filtrer par statut
     @GetMapping("/search")
-    public ResponseEntity<List<Task>> searchTasks(
+    public ResponseEntity<List<TaskDTO>> searchTasks(
             @RequestParam(required = false) Boolean completed,
             @RequestParam(required = false) String keyword) {
 
@@ -65,7 +64,6 @@ public class TaskController {
         if (keyword != null && !keyword.isBlank()) {
             return ResponseEntity.ok(taskService.searchTasksByTitle(keyword));
         }
-        // Si aucun critère, retourner toutes les tâches
         return ResponseEntity.ok(taskService.getAllTasks());
     }
 }
