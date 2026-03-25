@@ -1,5 +1,7 @@
 package com.example.doitnow.service;
 
+import com.example.doitnow.dto.CreateTaskDTO;
+import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Task;
 import com.example.doitnow.repository.TaskRepository;
@@ -12,54 +14,67 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
 
-    // Injection de dépendance par constructeur
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    // Récupérer toutes les tâches
-    public List<Task> getAllTasks() {
-        return taskRepository.findAll();
+    public List<TaskDTO> getAllTasks() {
+        return taskRepository.findAll().stream()
+                .map(this::toDTO)
+                .toList();
     }
 
-    // Récupérer une tâche par son ID
-    public Task getTaskById(String id) {
-        return taskRepository.findById(id)
+    public TaskDTO getTaskById(String id) {
+        Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'id : " + id));
+        return toDTO(task);
     }
 
-    // Créer une nouvelle tâche
-    public Task createTask(Task task) {
-        task.setId(null); // On laisse MongoDB générer l'ID
-        return taskRepository.save(task);
+    public TaskDTO createTask(CreateTaskDTO createTaskDTO) {
+        Task task = new Task();
+        task.setTitle(createTaskDTO.getTitle());
+        task.setDescription(createTaskDTO.getDescription());
+        task.setCompleted(false);
+        Task saved = taskRepository.save(task);
+        return toDTO(saved);
     }
 
-    // Mettre à jour une tâche existante
-    public Task updateTask(String id, Task taskDetails) {
-        Task existingTask = getTaskById(id); // Lève une exception si non trouvée
+    public TaskDTO updateTask(String id, TaskDTO taskDTO) {
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'id : " + id));
 
-        existingTask.setTitle(taskDetails.getTitle());
-        existingTask.setDescription(taskDetails.getDescription());
-        existingTask.setCompleted(taskDetails.isCompleted());
+        existingTask.setTitle(taskDTO.getTitle());
+        existingTask.setDescription(taskDTO.getDescription());
+        existingTask.setCompleted(taskDTO.isCompleted());
 
-        return taskRepository.save(existingTask);
+        Task updated = taskRepository.save(existingTask);
+        return toDTO(updated);
     }
 
-    // Supprimer une tâche
     public void deleteTask(String id) {
-        Task existingTask = getTaskById(id); // Vérifie que la tâche existe
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'id : " + id));
         taskRepository.deleteById(existingTask.getId());
     }
 
-    // --- BONUS : Recherche ---
-
-    // Trouver les tâches par statut (complétées ou non)
-    public List<Task> getTasksByCompleted(boolean completed) {
-        return taskRepository.findByCompleted(completed);
+    public List<TaskDTO> getTasksByCompleted(boolean completed) {
+        return taskRepository.findByCompleted(completed).stream()
+                .map(this::toDTO)
+                .toList();
     }
 
-    // Rechercher des tâches par mot-clé dans le titre
-    public List<Task> searchTasksByTitle(String keyword) {
-        return taskRepository.findByTitleContainingIgnoreCase(keyword);
+    public List<TaskDTO> searchTasksByTitle(String keyword) {
+        return taskRepository.findByTitleContainingIgnoreCase(keyword).stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    private TaskDTO toDTO(Task task) {
+        TaskDTO dto = new TaskDTO();
+        dto.setId(task.getId());
+        dto.setTitle(task.getTitle());
+        dto.setDescription(task.getDescription());
+        dto.setCompleted(task.isCompleted());
+        return dto;
     }
 }
