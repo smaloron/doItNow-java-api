@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/seb/Documents/00-Autoformation/java/doItNow-sping-project/doItNow/NR>1 {mi+=$4; ci+=$5} END {printf \"\"\"\"\"\"\"\"Couverture globale : %.1f%% \\(%d/%d instructions\\)\\\\n\"\"\"\"\"\"\"\", ci/**)",
+      "Read(//Users/seb/Documents/00-Autoformation/java/doItNow-sping-project/doItNow/NR>1 {total=$4+$5; if\\(total>0\\) {cov=$5/**)",
+      "Bash(sort -t'%' -k1 -n)"
+    ]
+  }
+}
