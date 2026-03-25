@@ -1,5 +1,7 @@
 package com.example.doitnow.service;
 
+import com.example.doitnow.dto.CreateTaskDTO;
+import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Task;
 import com.example.doitnow.repository.TaskRepository;
@@ -59,11 +61,11 @@ class TaskServiceTest {
     class CreateTaskTests {
 
         @Test
-        @DisplayName("Doit créer une tâche avec succès")
+        @DisplayName("Doit créer une tâche avec succès et retourner un TaskDTO")
         void shouldCreateTaskSuccessfully() {
-            Task newTask = new Task();
-            newTask.setTitle("Nouvelle tâche");
-            newTask.setDescription("Description de la nouvelle tâche");
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Nouvelle tâche");
+            createDTO.setDescription("Description de la nouvelle tâche");
 
             Task savedTask = new Task();
             savedTask.setId("new-id-123");
@@ -73,29 +75,34 @@ class TaskServiceTest {
 
             when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
-            Task result = taskService.createTask(newTask);
+            TaskDTO result = taskService.createTask(createDTO);
 
             assertNotNull(result);
             assertEquals("new-id-123", result.getId());
             assertEquals("Nouvelle tâche", result.getTitle());
+            assertEquals("Description de la nouvelle tâche", result.getDescription());
             assertFalse(result.isCompleted());
             verify(taskRepository, times(1)).save(any(Task.class));
         }
 
         @Test
-        @DisplayName("Doit mettre l'ID à null avant de sauvegarder")
-        void shouldSetIdToNullBeforeSaving() {
-            Task newTask = new Task();
-            newTask.setId("should-be-null");
-            newTask.setTitle("Nouvelle tâche");
+        @DisplayName("Doit sauvegarder une tâche non-complétée par défaut")
+        void shouldSaveTaskAsNotCompletedByDefault() {
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Nouvelle tâche");
+            createDTO.setDescription("Description de la nouvelle tâche");
 
             when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            taskService.createTask(newTask);
+            taskService.createTask(createDTO);
 
             verify(taskRepository).save(taskCaptor.capture());
-            assertNull(taskCaptor.getValue().getId(),
-                    "L'ID doit être null pour laisser MongoDB le générer");
+            Task capturedTask = taskCaptor.getValue();
+
+            assertFalse(capturedTask.isCompleted(),
+                    "Une tâche nouvellement créée ne doit pas être complétée");
+            assertEquals("Nouvelle tâche", capturedTask.getTitle());
+            assertEquals("Description de la nouvelle tâche", capturedTask.getDescription());
         }
     }
 
@@ -104,11 +111,11 @@ class TaskServiceTest {
     class GetTaskByIdTests {
 
         @Test
-        @DisplayName("Doit retourner la tâche quand elle existe")
+        @DisplayName("Doit retourner un TaskDTO quand la tâche existe")
         void shouldReturnTaskWhenFound() {
             when(taskRepository.findById("task-1")).thenReturn(Optional.of(task1));
 
-            Task result = taskService.getTaskById("task-1");
+            TaskDTO result = taskService.getTaskById("task-1");
 
             assertNotNull(result);
             assertEquals("task-1", result.getId());
@@ -136,11 +143,11 @@ class TaskServiceTest {
     class GetAllTasksTests {
 
         @Test
-        @DisplayName("Doit retourner la liste de toutes les tâches")
+        @DisplayName("Doit retourner la liste de tous les TaskDTO")
         void shouldReturnAllTasks() {
             when(taskRepository.findAll()).thenReturn(Arrays.asList(task1, task2));
 
-            List<Task> results = taskService.getAllTasks();
+            List<TaskDTO> results = taskService.getAllTasks();
 
             assertNotNull(results);
             assertEquals(2, results.size());
@@ -154,11 +161,52 @@ class TaskServiceTest {
         void shouldReturnEmptyListWhenNoTasks() {
             when(taskRepository.findAll()).thenReturn(List.of());
 
-            List<Task> results = taskService.getAllTasks();
+            List<TaskDTO> results = taskService.getAllTasks();
 
             assertNotNull(results);
             assertTrue(results.isEmpty());
             verify(taskRepository, times(1)).findAll();
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests de updateTask()")
+    class UpdateTaskTests {
+
+        @Test
+        @DisplayName("Doit mettre à jour et retourner un TaskDTO")
+        void shouldUpdateAndReturnDTO() {
+            TaskDTO updateDTO = new TaskDTO();
+            updateDTO.setTitle("Titre modifié");
+            updateDTO.setDescription("Description modifiée");
+            updateDTO.setCompleted(true);
+
+            Task updatedTask = new Task();
+            updatedTask.setId("task-1");
+            updatedTask.setTitle("Titre modifié");
+            updatedTask.setDescription("Description modifiée");
+            updatedTask.setCompleted(true);
+
+            when(taskRepository.findById("task-1")).thenReturn(Optional.of(task1));
+            when(taskRepository.save(any(Task.class))).thenReturn(updatedTask);
+
+            TaskDTO result = taskService.updateTask("task-1", updateDTO);
+
+            assertEquals("Titre modifié", result.getTitle());
+            assertTrue(result.isCompleted());
+        }
+
+        @Test
+        @DisplayName("Doit lever ResourceNotFoundException si la tâche n'existe pas")
+        void shouldThrowWhenUpdatingNonExistent() {
+            TaskDTO updateDTO = new TaskDTO();
+            updateDTO.setTitle("Titre");
+            updateDTO.setCompleted(false);
+
+            when(taskRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class,
+                    () -> taskService.updateTask("non-existent", updateDTO));
         }
     }
 

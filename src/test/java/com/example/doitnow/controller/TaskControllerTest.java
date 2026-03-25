@@ -1,7 +1,8 @@
 package com.example.doitnow.controller;
 
+import com.example.doitnow.dto.CreateTaskDTO;
+import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
-import com.example.doitnow.model.Task;
 import com.example.doitnow.service.AuthenticationService;
 import com.example.doitnow.service.JwtService;
 import com.example.doitnow.service.TaskService;
@@ -24,6 +25,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -51,22 +53,22 @@ class TaskControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Task task1;
-    private Task task2;
+    private TaskDTO taskDTO1;
+    private TaskDTO taskDTO2;
 
     @BeforeEach
     void setUp() {
-        task1 = new Task();
-        task1.setId("task-1");
-        task1.setTitle("Première tâche");
-        task1.setDescription("Description 1");
-        task1.setCompleted(false);
+        taskDTO1 = new TaskDTO();
+        taskDTO1.setId("task-1");
+        taskDTO1.setTitle("Première tâche");
+        taskDTO1.setDescription("Description 1");
+        taskDTO1.setCompleted(false);
 
-        task2 = new Task();
-        task2.setId("task-2");
-        task2.setTitle("Deuxième tâche");
-        task2.setDescription("Description 2");
-        task2.setCompleted(true);
+        taskDTO2 = new TaskDTO();
+        taskDTO2.setId("task-2");
+        taskDTO2.setTitle("Deuxième tâche");
+        taskDTO2.setDescription("Description 2");
+        taskDTO2.setCompleted(true);
     }
 
     @Nested
@@ -76,8 +78,7 @@ class TaskControllerTest {
         @Test
         @DisplayName("Doit retourner 200 OK avec la liste des tâches")
         void shouldReturnAllTasks() throws Exception {
-            List<Task> tasks = Arrays.asList(task1, task2);
-            when(taskService.getAllTasks()).thenReturn(tasks);
+            when(taskService.getAllTasks()).thenReturn(Arrays.asList(taskDTO1, taskDTO2));
 
             mockMvc.perform(get("/api/tasks"))
                     .andExpect(status().isOk())
@@ -109,7 +110,7 @@ class TaskControllerTest {
         @Test
         @DisplayName("Doit retourner 200 OK avec la tâche demandée")
         void shouldReturnTaskById() throws Exception {
-            when(taskService.getTaskById("task-1")).thenReturn(task1);
+            when(taskService.getTaskById("task-1")).thenReturn(taskDTO1);
 
             mockMvc.perform(get("/api/tasks/{id}", "task-1"))
                     .andExpect(status().isOk())
@@ -136,31 +137,98 @@ class TaskControllerTest {
     class CreateTaskTests {
 
         @Test
-        @DisplayName("Doit retourner 201 Created avec la tâche créée")
+        @DisplayName("Doit retourner 201 Created avec le TaskDTO créé")
         void shouldCreateTaskAndReturn201() throws Exception {
-            Task newTask = new Task();
-            newTask.setTitle("Nouvelle tâche");
-            newTask.setDescription("Description");
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Nouvelle tâche");
+            createDTO.setDescription("Description");
 
-            Task createdTask = new Task();
-            createdTask.setId("new-id");
-            createdTask.setTitle("Nouvelle tâche");
-            createdTask.setDescription("Description");
-            createdTask.setCompleted(false);
+            TaskDTO createdDTO = new TaskDTO();
+            createdDTO.setId("new-id");
+            createdDTO.setTitle("Nouvelle tâche");
+            createdDTO.setDescription("Description");
+            createdDTO.setCompleted(false);
 
-            when(taskService.createTask(any(Task.class))).thenReturn(createdTask);
+            when(taskService.createTask(any(CreateTaskDTO.class))).thenReturn(createdDTO);
 
             mockMvc.perform(post("/api/tasks")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(newTask)))
+                            .content(objectMapper.writeValueAsString(createDTO)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id", is("new-id")))
                     .andExpect(jsonPath("$.title", is("Nouvelle tâche")))
                     .andExpect(jsonPath("$.completed", is(false)));
 
-            verify(taskService, times(1)).createTask(any(Task.class));
+            verify(taskService, times(1)).createTask(any(CreateTaskDTO.class));
         }
 
+        @Test
+        @DisplayName("Doit retourner 400 quand le titre est vide (@NotBlank)")
+        void shouldReturn400WhenTitleIsEmpty() throws Exception {
+            String invalidJson = "{\"title\":\"\", \"description\":\"desc\"}";
+
+            mockMvc.perform(post("/api/tasks")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJson))
+                    .andExpect(status().isBadRequest());
+
+            verify(taskService, never()).createTask(any());
+        }
+
+        @Test
+        @DisplayName("Doit retourner 400 quand le titre est trop court (@Size min=3)")
+        void shouldReturn400WhenTitleTooShort() throws Exception {
+            String invalidJson = "{\"title\":\"ab\", \"description\":\"desc\"}";
+
+            mockMvc.perform(post("/api/tasks")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJson))
+                    .andExpect(status().isBadRequest());
+
+            verify(taskService, never()).createTask(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/tasks/{id}")
+    class UpdateTaskTests {
+
+        @Test
+        @DisplayName("Doit retourner 200 OK avec le TaskDTO mis à jour")
+        void shouldUpdateAndReturn200() throws Exception {
+            TaskDTO updateDTO = new TaskDTO();
+            updateDTO.setTitle("Titre modifié");
+            updateDTO.setDescription("Description modifiée");
+            updateDTO.setCompleted(true);
+
+            TaskDTO updatedDTO = new TaskDTO();
+            updatedDTO.setId("task-1");
+            updatedDTO.setTitle("Titre modifié");
+            updatedDTO.setDescription("Description modifiée");
+            updatedDTO.setCompleted(true);
+
+            when(taskService.updateTask(eq("task-1"), any(TaskDTO.class))).thenReturn(updatedDTO);
+
+            mockMvc.perform(put("/api/tasks/{id}", "task-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title", is("Titre modifié")))
+                    .andExpect(jsonPath("$.completed", is(true)));
+        }
+
+        @Test
+        @DisplayName("Doit retourner 400 quand le titre est vide à la mise à jour")
+        void shouldReturn400WhenUpdateTitleIsEmpty() throws Exception {
+            String invalidJson = "{\"title\":\"\", \"description\":\"desc\", \"completed\":false}";
+
+            mockMvc.perform(put("/api/tasks/{id}", "task-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJson))
+                    .andExpect(status().isBadRequest());
+
+            verify(taskService, never()).updateTask(anyString(), any());
+        }
     }
 
     @Nested
