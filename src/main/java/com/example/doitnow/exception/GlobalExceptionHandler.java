@@ -1,39 +1,63 @@
 package com.example.doitnow.exception;
 
+import org.springframework.dao
+        .DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind
+        .MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation
+        .ExceptionHandler;
+import org.springframework.web.bind.annotation
+        .RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Object> handleResourceNotFoundException(
-            ResourceNotFoundException ex
-    ) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("message", ex.getMessage());
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    @ExceptionHandler(
+            ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>>
+    handleNotFound(
+            ResourceNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Non trouvé");
+        error.put("message", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationExceptions(
-            MethodArgumentNotValidException ex
-    ) {
+    @ExceptionHandler(
+            MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>>
+    handleValidation(
+            MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return errors;
+        ex.getBindingResult()
+                .getFieldErrors()
+                .forEach(err -> errors.put(
+                        err.getField(),
+                        err.getDefaultMessage()));
+        return ResponseEntity.badRequest()
+                .body(errors);
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<Map<String, String>>
+    handleDuplicateKey(
+            DuplicateKeyException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Conflit");
+        error.put("message",
+                "Un enregistrement avec cette "
+                        + "valeur unique existe déjà. "
+                        + "Vérifiez que l'email n'est "
+                        + "pas déjà utilisé.");
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
     }
 }
