@@ -2,6 +2,7 @@ package com.example.doitnow.service;
 
 import com.example.doitnow.dto.CreateTaskDTO;
 import com.example.doitnow.dto.TaskDTO;
+import com.example.doitnow.dto.TaskNotification;
 import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Priority;
 import com.example.doitnow.model.Task;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -23,9 +25,13 @@ import java.util.List;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(
+            TaskRepository taskRepository,
+            SimpMessagingTemplate messagingTemplate) {
         this.taskRepository = taskRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     private String getCurrentUserId() {
@@ -61,7 +67,13 @@ public class TaskService {
         task.setPriority(dto.getPriority() != null ? dto.getPriority() : Priority.MEDIUM);
         task.setTags(dto.getTags() != null ? dto.getTags() : new ArrayList<>());
         task.setDueDate(dto.getDueDate());
-        return toDTO(taskRepository.save(task));
+
+        TaskDTO result = toDTO(taskRepository.save(task));
+
+        // Notifier en temps réel
+        publishNotification(getCurrentUserId(), "CREATED", result);
+
+        return result;
     }
 
     public TaskDTO updateTask(String id, TaskDTO dto) {
@@ -75,13 +87,24 @@ public class TaskService {
         task.setTags(dto.getTags() != null ? dto.getTags() : task.getTags());
         task.setDueDate(dto.getDueDate());
 
-        return toDTO(taskRepository.save(task));
+        TaskDTO result = toDTO(taskRepository.save(task));
+
+        // Notifier en temps réel
+        publishNotification(getCurrentUserId(), "CREATED", result);
+
+        return result;
     }
 
     public void deleteTask(String id) {
         Task task = taskRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tâche non trouvée avec l'id : " + id));
         taskRepository.deleteById(task.getId());
+
+        // Pour une suppression, on envoie seulement l'id
+        TaskNotification notification = new TaskNotification(
+                "DELETED", id, null);
+        messagingTemplate.convertAndSend(
+                "/topic/tasks/" + getCurrentUserId(), notification);
     }
 
     // --- Recherche et filtres ---
@@ -134,5 +157,13 @@ public class TaskService {
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
         return dto;
+    }
+
+    private void publishNotification(
+            String userId, String type, TaskDTO task) {
+        TaskNotification notification =
+                new TaskNotification(type, task.getId(), task);
+        messagingTemplate.convertAndSend(
+                "/topic/tasks/" + userId, notification);
     }
 }
