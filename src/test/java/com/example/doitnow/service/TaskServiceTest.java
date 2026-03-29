@@ -3,10 +3,12 @@ package com.example.doitnow.service;
 import com.example.doitnow.dto.CreateTaskDTO;
 import com.example.doitnow.dto.TaskDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
+import com.example.doitnow.dto.TaskNotification;
 import com.example.doitnow.model.Priority;
 import com.example.doitnow.model.Task;
 import com.example.doitnow.model.User;
 import com.example.doitnow.repository.TaskRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +42,9 @@ class TaskServiceTest {
 
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private TaskService taskService;
@@ -372,6 +377,70 @@ class TaskServiceTest {
                     .thenReturn(List.of());
 
             assertTrue(taskService.getTasksByPriority(Priority.URGENT).isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests des notifications WebSocket")
+    class WebSocketNotificationTests {
+
+        @Test
+        @DisplayName("Doit envoyer une notification CREATED lors de la création")
+        void shouldSendCreatedNotification() {
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Tâche notifiée");
+
+            when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
+                Task t = inv.getArgument(0);
+                t.setId("notif-id");
+                return t;
+            });
+
+            taskService.createTask(createDTO);
+
+            verify(messagingTemplate).convertAndSend(
+                    eq("/topic/tasks/user-1"),
+                    any(TaskNotification.class));
+        }
+
+        @Test
+        @DisplayName("Doit envoyer une notification lors de la mise à jour")
+        void shouldSendUpdatedNotification() {
+            TaskDTO updateDTO = new TaskDTO();
+            updateDTO.setTitle("Titre modifié");
+            updateDTO.setCompleted(true);
+
+            when(taskRepository.findByIdAndUserId("task-1", "user-1")).thenReturn(Optional.of(task1));
+            when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            taskService.updateTask("task-1", updateDTO);
+
+            verify(messagingTemplate).convertAndSend(
+                    eq("/topic/tasks/user-1"),
+                    any(TaskNotification.class));
+        }
+
+        @Test
+        @DisplayName("Doit envoyer une notification DELETED lors de la suppression")
+        void shouldSendDeletedNotification() {
+            when(taskRepository.findByIdAndUserId("task-1", "user-1")).thenReturn(Optional.of(task1));
+
+            taskService.deleteTask("task-1");
+
+            verify(messagingTemplate).convertAndSend(
+                    eq("/topic/tasks/user-1"),
+                    any(TaskNotification.class));
+        }
+
+        @Test
+        @DisplayName("Ne doit pas envoyer de notification si la tâche n'existe pas")
+        void shouldNotNotifyWhenTaskNotFound() {
+            when(taskRepository.findByIdAndUserId("non-existent", "user-1")).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class,
+                    () -> taskService.deleteTask("non-existent"));
+
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(TaskNotification.class));
         }
     }
 }
