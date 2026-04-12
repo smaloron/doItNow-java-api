@@ -1,5 +1,18 @@
 services:
 
+  app:
+    build: .
+    container_name: doitnow-app
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/doitnow
+    volumes:
+      - ./src:/app/src
+    restart: unless-stopped
+
   mongodb:
     image: mongo:7
     container_name: mongo-db
@@ -15,7 +28,7 @@ services:
     image: mongo-express:latest
     container_name: mongo-express
     ports:
-      - "8081:8081"
+      - "8082:8081"
     environment:
       ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/
       ME_CONFIG_BASICAUTH: "false"
