@@ -121,6 +121,48 @@ class TaskStatServiceTest {
 
             assertEquals(33.33, stats.getCompletionRate());
         }
+
+        @Test
+        @DisplayName("Doit gérer le cas où toutes les tâches sont en retard")
+        void shouldHandleAllTasksOverdue() {
+            mockCounts(5, 0, 5);
+            mockAggregation(List.of());
+
+            TaskStatsDTO stats = taskStatService.getStatsForUser(USER_ID);
+
+            assertEquals(5, stats.getTotal());
+            assertEquals(0, stats.getCompleted());
+            assertEquals(5, stats.getPending());
+            assertEquals(5, stats.getOverdue());
+            assertEquals(0, stats.getCompletionRate());
+        }
+
+        @Test
+        @DisplayName("Doit arrondir 66.67% correctement (2/3)")
+        void shouldRoundTwoThirds() {
+            mockCounts(3, 2, 0);
+            mockAggregation(List.of());
+
+            TaskStatsDTO stats = taskStatService.getStatsForUser(USER_ID);
+
+            assertEquals(66.67, stats.getCompletionRate());
+        }
+
+        @Test
+        @DisplayName("Doit gérer une seule tâche complétée")
+        void shouldHandleSingleCompletedTask() {
+            mockCounts(1, 1, 0);
+            mockAggregation(List.of(
+                    new Document("priority", "HIGH").append("count", 1)
+            ));
+
+            TaskStatsDTO stats = taskStatService.getStatsForUser(USER_ID);
+
+            assertEquals(1, stats.getTotal());
+            assertEquals(1, stats.getCompleted());
+            assertEquals(0, stats.getPending());
+            assertEquals(100.0, stats.getCompletionRate());
+        }
     }
 
     @Nested
@@ -159,6 +201,22 @@ class TaskStatServiceTest {
 
             assertNotNull(stats.getTasksByPriority());
             assertTrue(stats.getTasksByPriority().isEmpty());
+        }
+
+        @Test
+        @DisplayName("Doit gérer une seule priorité présente")
+        void shouldHandleSinglePriority() {
+            mockCounts(3, 1, 0);
+            mockAggregation(List.of(
+                    new Document("priority", "MEDIUM").append("count", 3)
+            ));
+
+            TaskStatsDTO stats = taskStatService.getStatsForUser(USER_ID);
+
+            Map<String, Long> byPriority = stats.getTasksByPriority();
+            assertEquals(1, byPriority.size());
+            assertEquals(3L, byPriority.get("MEDIUM"));
+            assertNull(byPriority.get("HIGH"));
         }
     }
 }

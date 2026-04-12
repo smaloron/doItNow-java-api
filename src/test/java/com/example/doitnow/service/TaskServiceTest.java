@@ -384,11 +384,16 @@ class TaskServiceTest {
     @DisplayName("Tests des notifications WebSocket")
     class WebSocketNotificationTests {
 
+        @Captor
+        private ArgumentCaptor<TaskNotification> notificationCaptor;
+
         @Test
-        @DisplayName("Doit envoyer une notification CREATED lors de la création")
-        void shouldSendCreatedNotification() {
+        @DisplayName("Doit envoyer une notification CREATED avec le bon contenu")
+        void shouldSendCreatedNotificationWithCorrectPayload() {
             CreateTaskDTO createDTO = new CreateTaskDTO();
             createDTO.setTitle("Tâche notifiée");
+            createDTO.setPriority(Priority.HIGH);
+            createDTO.setTags(List.of("urgent"));
 
             when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
                 Task t = inv.getArgument(0);
@@ -400,15 +405,23 @@ class TaskServiceTest {
 
             verify(messagingTemplate).convertAndSend(
                     eq("/topic/tasks/user-1"),
-                    any(TaskNotification.class));
+                    notificationCaptor.capture());
+
+            TaskNotification notification = notificationCaptor.getValue();
+            assertEquals("CREATED", notification.type());
+            assertEquals("notif-id", notification.taskId());
+            assertNotNull(notification.task());
+            assertEquals("Tâche notifiée", notification.task().getTitle());
+            assertEquals(Priority.HIGH, notification.task().getPriority());
         }
 
         @Test
-        @DisplayName("Doit envoyer une notification lors de la mise à jour")
-        void shouldSendUpdatedNotification() {
+        @DisplayName("Doit envoyer une notification avec le bon contenu lors de la mise à jour")
+        void shouldSendUpdateNotificationWithCorrectPayload() {
             TaskDTO updateDTO = new TaskDTO();
             updateDTO.setTitle("Titre modifié");
             updateDTO.setCompleted(true);
+            updateDTO.setPriority(Priority.URGENT);
 
             when(taskRepository.findByIdAndUserId("task-1", "user-1")).thenReturn(Optional.of(task1));
             when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -417,19 +430,31 @@ class TaskServiceTest {
 
             verify(messagingTemplate).convertAndSend(
                     eq("/topic/tasks/user-1"),
-                    any(TaskNotification.class));
+                    notificationCaptor.capture());
+
+            TaskNotification notification = notificationCaptor.getValue();
+            assertEquals("task-1", notification.taskId());
+            assertNotNull(notification.task());
+            assertEquals("Titre modifié", notification.task().getTitle());
+            assertTrue(notification.task().isCompleted());
+            assertEquals(Priority.URGENT, notification.task().getPriority());
         }
 
         @Test
-        @DisplayName("Doit envoyer une notification DELETED lors de la suppression")
-        void shouldSendDeletedNotification() {
+        @DisplayName("Doit envoyer une notification DELETED sans tâche")
+        void shouldSendDeletedNotificationWithNullTask() {
             when(taskRepository.findByIdAndUserId("task-1", "user-1")).thenReturn(Optional.of(task1));
 
             taskService.deleteTask("task-1");
 
             verify(messagingTemplate).convertAndSend(
                     eq("/topic/tasks/user-1"),
-                    any(TaskNotification.class));
+                    notificationCaptor.capture());
+
+            TaskNotification notification = notificationCaptor.getValue();
+            assertEquals("DELETED", notification.type());
+            assertEquals("task-1", notification.taskId());
+            assertNull(notification.task());
         }
 
         @Test
@@ -441,6 +466,46 @@ class TaskServiceTest {
                     () -> taskService.deleteTask("non-existent"));
 
             verify(messagingTemplate, never()).convertAndSend(anyString(), any(TaskNotification.class));
+        }
+
+        @Test
+        @DisplayName("Doit envoyer la notification au bon topic utilisateur")
+        void shouldSendToCorrectUserTopic() {
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Tâche test");
+
+            when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
+                Task t = inv.getArgument(0);
+                t.setId("id-1");
+                return t;
+            });
+
+            taskService.createTask(createDTO);
+
+            ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
+            verify(messagingTemplate).convertAndSend(
+                    topicCaptor.capture(),
+                    any(TaskNotification.class));
+
+            assertEquals("/topic/tasks/user-1", topicCaptor.getValue());
+        }
+
+        @Test
+        @DisplayName("Doit envoyer exactement une notification par opération CRUD")
+        void shouldSendExactlyOneNotificationPerOperation() {
+            CreateTaskDTO createDTO = new CreateTaskDTO();
+            createDTO.setTitle("Tâche test");
+
+            when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
+                Task t = inv.getArgument(0);
+                t.setId("id-1");
+                return t;
+            });
+
+            taskService.createTask(createDTO);
+
+            verify(messagingTemplate, times(1))
+                    .convertAndSend(anyString(), any(TaskNotification.class));
         }
     }
 }

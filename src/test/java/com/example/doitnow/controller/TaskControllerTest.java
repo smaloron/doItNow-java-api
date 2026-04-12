@@ -2,16 +2,21 @@ package com.example.doitnow.controller;
 
 import com.example.doitnow.dto.CreateTaskDTO;
 import com.example.doitnow.dto.TaskDTO;
+import com.example.doitnow.dto.TaskStatsDTO;
 import com.example.doitnow.exception.ResourceNotFoundException;
 import com.example.doitnow.model.Priority;
+import com.example.doitnow.model.User;
 import com.example.doitnow.service.AuthenticationService;
 import com.example.doitnow.service.JwtService;
 import com.example.doitnow.service.TaskService;
 import com.example.doitnow.service.TaskStatService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import tools.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +32,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -330,6 +336,100 @@ class TaskControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].priority", is("HIGH")));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/tasks/stats")
+    class GetStatsTests {
+
+        private void setUpSecurityContext() {
+            User mockUser = new User();
+            mockUser.setId("user-1");
+            mockUser.setEmail("test@example.com");
+            var auth = new UsernamePasswordAuthenticationToken(mockUser, null, mockUser.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+
+        @AfterEach
+        void tearDown() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("Doit retourner 200 avec les statistiques complètes")
+        void shouldReturnStats() throws Exception {
+            setUpSecurityContext();
+
+            TaskStatsDTO stats = new TaskStatsDTO();
+            stats.setTotal(10);
+            stats.setCompleted(7);
+            stats.setPending(3);
+            stats.setOverdue(1);
+            stats.setCompletionRate(70.0);
+            stats.setTasksByPriority(Map.of(
+                    "HIGH", 4L, "MEDIUM", 3L, "LOW", 3L
+            ));
+
+            when(taskStatService.getStatsForUser("user-1")).thenReturn(stats);
+
+            mockMvc.perform(get("/api/tasks/stats"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total", is(10)))
+                    .andExpect(jsonPath("$.completed", is(7)))
+                    .andExpect(jsonPath("$.pending", is(3)))
+                    .andExpect(jsonPath("$.overdue", is(1)))
+                    .andExpect(jsonPath("$.completionRate", is(70.0)))
+                    .andExpect(jsonPath("$.tasksByPriority.HIGH", is(4)))
+                    .andExpect(jsonPath("$.tasksByPriority.MEDIUM", is(3)))
+                    .andExpect(jsonPath("$.tasksByPriority.LOW", is(3)));
+        }
+
+        @Test
+        @DisplayName("Doit retourner des statistiques vides quand aucune tâche")
+        void shouldReturnEmptyStats() throws Exception {
+            setUpSecurityContext();
+
+            TaskStatsDTO stats = new TaskStatsDTO();
+            stats.setTotal(0);
+            stats.setCompleted(0);
+            stats.setPending(0);
+            stats.setOverdue(0);
+            stats.setCompletionRate(0);
+            stats.setTasksByPriority(Map.of());
+
+            when(taskStatService.getStatsForUser("user-1")).thenReturn(stats);
+
+            mockMvc.perform(get("/api/tasks/stats"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total", is(0)))
+                    .andExpect(jsonPath("$.completionRate", is(0.0)))
+                    .andExpect(jsonPath("$.tasksByPriority").isEmpty());
+        }
+
+        @Test
+        @DisplayName("Doit retourner les stats avec toutes les priorités")
+        void shouldReturnStatsWithAllPriorities() throws Exception {
+            setUpSecurityContext();
+
+            TaskStatsDTO stats = new TaskStatsDTO();
+            stats.setTotal(10);
+            stats.setCompleted(5);
+            stats.setPending(5);
+            stats.setOverdue(2);
+            stats.setCompletionRate(50.0);
+            stats.setTasksByPriority(Map.of(
+                    "URGENT", 1L, "HIGH", 3L, "MEDIUM", 4L, "LOW", 2L
+            ));
+
+            when(taskStatService.getStatsForUser("user-1")).thenReturn(stats);
+
+            mockMvc.perform(get("/api/tasks/stats"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.tasksByPriority.URGENT", is(1)))
+                    .andExpect(jsonPath("$.tasksByPriority.HIGH", is(3)))
+                    .andExpect(jsonPath("$.tasksByPriority.MEDIUM", is(4)))
+                    .andExpect(jsonPath("$.tasksByPriority.LOW", is(2)));
         }
     }
 }
