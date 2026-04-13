@@ -1,6 +1,6 @@
-# DoItNow - API de Gestion de Taches
+# DoItNow - API de Gestion de tâches
 
-Application Spring Boot 4 avec MongoDB, authentification JWT et notifications WebSocket en temps reel.
+Application Spring Boot 4 avec MongoDB, authentification JWT et notifications WebSocket en temps réel.
 
 ## Stack technique
 
@@ -14,7 +14,7 @@ Application Spring Boot 4 avec MongoDB, authentification JWT et notifications We
 
 ## Lancement
 
-### Avec Docker (recommande)
+### Avec Docker (recommandé)
 
 ```bash
 docker compose up --build
@@ -28,22 +28,23 @@ docker compose up --build
 
 ### Sans Docker
 
-Pre-requis : Java 17+, MongoDB en local sur le port 27017.
+Pré-requis : Java 17+, MongoDB en local sur le port 27017.
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-### Donnees initiales
+### Données initiales
 
-Au premier demarrage, si la base est vide, un compte admin et 8 taches exemples sont crees automatiquement :
+Au premier démarrage, si la base est vide, un compte admin et 8 tâches exemples sont créés automatiquement :
 
 - **Email** : `admin@doitnow.com`
 - **Mot de passe** : `admin123`
 
 ## Authentification
 
-L'API utilise des tokens JWT (validite : 24h). Les endpoints `/api/auth/**`, `/api/health` et `/api/welcome` sont publics. Tous les autres necessitent un header `Authorization: Bearer <token>`.
+L'API utilise des tokens JWT (validité : 24h). Les endpoints `/api/auth/**`, `/api/health` et `/api/welcome` sont 
+publics. Tous les autres nécessitent un header `Authorization: Bearer <token>`.
 
 ### Inscription
 
@@ -83,30 +84,30 @@ Reponse `200` :
 }
 ```
 
-## API Taches
+## API tâches
 
-Tous les endpoints ci-dessous necessitent le header `Authorization: Bearer <token>`.
-Les taches sont isolees par utilisateur.
+Tous les endpoints ci-dessous nécessitent le header `Authorization: Bearer <token>`.
+Les tâches sont isolées par utilisateur.
 
 ### CRUD
 
-| Methode | Endpoint            | Description             |
-|---------|---------------------|-------------------------|
-| GET     | `/api/tasks`        | Lister les taches (pagine) |
-| GET     | `/api/tasks/{id}`   | Detail d'une tache      |
-| POST    | `/api/tasks`        | Creer une tache         |
-| PUT     | `/api/tasks/{id}`   | Modifier une tache      |
-| DELETE  | `/api/tasks/{id}`   | Supprimer une tache     |
+| Methode | Endpoint            | Description                |
+|---------|---------------------|----------------------------|
+| GET     | `/api/tasks`        | Lister les tâches (pagine) |
+| GET     | `/api/tasks/{id}`   | Detail d'une tâche         |
+| POST    | `/api/tasks`        | Créer une tâche            |
+| PUT     | `/api/tasks/{id}`   | Modifier une tâche         |
+| DELETE  | `/api/tasks/{id}`   | Supprimer une tâche        |
 
 ### Filtres et recherche
 
-| Methode | Endpoint                       | Description                  |
-|---------|--------------------------------|------------------------------|
+| Methode | Endpoint                       | Description                     |
+|---------|--------------------------------|---------------------------------|
 | GET     | `/api/tasks/search?keyword=x`  | Recherche par titre/description |
-| GET     | `/api/tasks/tag/{tag}`         | Filtrer par tag              |
-| GET     | `/api/tasks/priority/{priority}` | Filtrer par priorite       |
-| GET     | `/api/tasks/overdue`           | Taches en retard             |
-| GET     | `/api/tasks/stats`             | Statistiques                 |
+| GET     | `/api/tasks/tag/{tag}`         | Filtrer par tag                 |
+| GET     | `/api/tasks/priority/{priority}` | Filtrer par priorité            |
+| GET     | `/api/tasks/overdue`           | tâches en retard                |
+| GET     | `/api/tasks/stats`             | Statistiques                    |
 
 ### Pagination (GET /api/tasks et /api/tasks/search)
 
@@ -117,7 +118,7 @@ Les taches sont isolees par utilisateur.
 | `sortBy`    | `createdAt` | Champ de tri          |
 | `direction` | `desc`      | `asc` ou `desc`       |
 
-### Creer une tache
+### Créer une tâche
 
 ```
 POST /api/tasks
@@ -125,7 +126,7 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 {
-  "title": "Ma tache",
+  "title": "Ma tâche",
   "description": "Description optionnelle",
   "priority": "HIGH",
   "tags": ["urgent", "client"],
@@ -133,20 +134,20 @@ Authorization: Bearer <token>
 }
 ```
 
-| Champ         | Type       | Requis | Contraintes                    |
-|---------------|------------|--------|--------------------------------|
-| `title`       | string     | oui    | 3 a 100 caracteres             |
-| `description` | string     | non    | 500 caracteres max             |
+| Champ         | Type       | Requis | Contraintes                                          |
+|---------------|------------|--------|------------------------------------------------------|
+| `title`       | string     | oui    | 3 a 100 caracteres                                   |
+| `description` | string     | non    | 500 caracteres max                                   |
 | `priority`    | enum       | non    | `LOW`, `MEDIUM`, `HIGH`, `URGENT` (defaut: `MEDIUM`) |
-| `tags`        | string[]   | non    |                                |
-| `dueDate`     | date       | non    | Format `YYYY-MM-DD`, date future ou presente |
+| `tags`        | string[]   | non    |                                                      |
+| `dueDate`     | date       | non    | Format `YYYY-MM-DD`, date future ou présente         |
 
-### Reponse tache
+### Reponse tâche
 
 ```json
 {
   "id": "664a...",
-  "title": "Ma tache",
+  "title": "Ma tâche",
   "description": "Description optionnelle",
   "completed": false,
   "userId": "663f...",
@@ -189,11 +190,11 @@ GET /api/tasks/stats
 
 ## WebSocket
 
-Connexion STOMP via SockJS sur `/ws`. Le token JWT doit etre passe dans le header `Authorization` de la frame CONNECT.
+Connexion STOMP via SockJS sur `/ws`. Le token JWT doit etre passé dans le header `Authorization` de la frame CONNECT.
 
 **Topic** : `/topic/tasks/{userId}`
 
-Notifications envoyees lors de la creation, modification ou suppression d'une tache :
+Notifications envoyées lors de la création, modification ou suppression d'une tâche :
 
 ```json
 {
@@ -207,11 +208,11 @@ Types : `CREATED`, `UPDATED`, `DELETED` (pour `DELETED`, le champ `task` est `nu
 
 ## Gestion des erreurs
 
-| Code | Cas                       | Format de reponse                              |
-|------|---------------------------|------------------------------------------------|
-| 400  | Validation echouee        | `{ "champ": "message d'erreur" }`              |
-| 404  | Ressource non trouvee     | `{ "error": "Non trouve", "message": "..." }`  |
-| 409  | Doublon (email existant)  | `{ "error": "Conflit", "message": "..." }`     |
+| Code | Cas                      | Format de reponse                             |
+|------|--------------------------|-----------------------------------------------|
+| 400  | Validation echouée       | `{ "champ": "message d'erreur" }`             |
+| 404  | Ressource non trouvée    | `{ "error": "Non trouvé", "message": "..." }` |
+| 409  | Doublon (email existant) | `{ "error": "Conflit", "message": "..." }`    |
 
 ## Tests
 
@@ -219,4 +220,4 @@ Types : `CREATED`, `UPDATED`, `DELETED` (pour `DELETED`, le champ `task` est `nu
 ./mvnw test
 ```
 
-Les tests d'integration utilisent Testcontainers (MongoDB). Docker doit etre demarre.
+Les tests d'integration utilisent Testcontainers (MongoDB). Docker doit etre demarré.
